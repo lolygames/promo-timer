@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Pomodoro Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF6EC;
+    --bg-2:#FFEAD6;
+    --card:#FFFFFF;
+    --card-border:#FFE0C2;
+    --text:#2B211D;
+    --muted:#8A736A;
+    --tomato:#FF5A4A;
+    --tomato-dark:#E84533;
+    --tomato-soft:#FFF0EB;
+    --leaf:#2FB47A;
+    --leaf-dark:#239E68;
+    --ring-bg:#FFE8D9;
+    --shadow:0 20px 40px rgba(232,69,51,.14), 0 4px 12px rgba(0,0,0,.06);
+    --btn-shadow:0 8px 20px rgba(255,90,74,.35);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1C1512;
+      --bg-2:#2A1E18;
+      --card:#2B2320;
+      --card-border:#3D2E28;
+      --text:#FFF6EC;
+      --muted:#B8A49A;
+      --tomato:#FF6B5A;
+      --tomato-dark:#FF5A4A;
+      --tomato-soft:#3A2420;
+      --ring-bg:#3A2A24;
+      --shadow:0 20px 40px rgba(0,0,0,.45);
+      --btn-shadow:0 8px 20px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Quicksand", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background:
+      radial-gradient(900px 500px at 15% -10%, var(--bg-2) 0%, transparent 55%),
+      radial-gradient(700px 400px at 95% 10%, #FFD9C8 0%, transparent 50%),
+      var(--bg);
+    color:var(--text);
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    padding:18px 16px 28px;
+  }
+  @media (prefers-color-scheme: dark){
+    body{background: radial-gradient(900px 500px at 15% -10%, #2E211A 0%, transparent 55%), var(--bg);}
+  }
+  .wrap{width:100%; max-width:520px; margin:0 auto;}
+
+  /* top tiny brand */
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-badge{
+    width:38px;height:38px;border-radius:12px;background:var(--tomato);
+    display:grid;place-items:center; box-shadow:var(--btn-shadow);
+    font-size:20px; line-height:1;
+  }
+  .brand h1{font-family:"Nunito",sans-serif; font-size:19px; line-height:1; margin:0; letter-spacing:-.02em; font-weight:900;}
+  .brand p{margin:2px 0 0; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.02em;}
+  .sound-btn{
+    border:1.5px solid var(--card-border); background:var(--card); color:var(--text);
+    height:38px; padding:0 14px; border-radius:999px; font-weight:700; font-size:13px;
+    display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  }
+  .sound-btn:active{transform:scale(.97)}
+
+  /* card */
+  .card{
+    background:var(--card); border:1.5px solid var(--card-border); border-radius:28px;
+    box-shadow:var(--shadow); padding:20px 18px 18px; overflow:hidden; position:relative;
+  }
+  .card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:6px;
+    background:linear-gradient(90deg, var(--tomato), #FF9A7A, var(--leaf));
+  }
+
+  /* mode tabs */
+  .tabs{
+    display:flex; background:var(--tomato-soft); border:1px solid var(--card-border);
+    padding:5px; border-radius:999px; gap:4px;
+  }
+  .tab{
+    flex:1; border:0; background:transparent; padding:10px 6px; border-radius:999px;
+    font-family:"Nunito",sans-serif; font-weight:800; font-size:13.5px; color:var(--muted);
+    cursor:pointer; white-space:nowrap; transition:.18s;
+  }
+  .tab.active{background:var(--tomato); color:white; box-shadow:0 6px 14px rgba(255,90,74,.35)}
+  .tab.active.break{background:var(--leaf); box-shadow:0 6px 14px rgba(47,180,122,.35)}
+
+  /* timer area */
+  .timer-area{display:flex; flex-direction:column; align-items:center; padding:18px 6px 6px;}
+  .ring-wrap{position:relative; width:272px; height:272px; max-width:78vw; aspect-ratio:1;}
+  @media(min-width:480px){ .ring-wrap{width:300px;height:300px} }
+  .ring{width:100%;height:100%; transform:rotate(-90deg)}
+  .ring-bg{fill:none; stroke:var(--ring-bg); stroke-width:12; }
+  .ring-fg{fill:none; stroke:var(--tomato); stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset .4s linear, stroke .3s;}
+  .ring-fg.break{stroke:var(--leaf)}
+
+  .center{
+    position:absolute; inset:12px; border-radius:50%; background:var(--card);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    border:1px solid var(--card-border);
+  }
+  /* cute tomato */
+  .tomato{
+    width:86px; height:74px; position:relative; margin-bottom:2px;
+    filter: drop-shadow(0 8px 12px rgba(232,69,51,.22));
+  }
+  .tomato.running{animation:bob 1.6s ease-in-out infinite}
+  .tomato.done{animation:wiggle .6s ease-in-out 3}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-5px) rotate(1.5deg)}}
+  @keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+
+  /* spark buddy — original little star character, pure SVG/CSS */
+  .buddy{
+    position:absolute; top:-4px; right:-4px; width:64px; height:64px; z-index:4;
+    pointer-events:none; filter:drop-shadow(0 6px 10px rgba(242,140,40,.35));
+  }
+  @media(min-width:480px){ .buddy{width:74px; height:74px; top:-8px; right:-8px;} }
+  .buddy-svg{width:100%; height:100%; display:block;}
+  .buddy-inner{width:100%; height:100%; animation:buddy-bob 3.2s ease-in-out infinite;}
+  @keyframes buddy-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+  .buddy[data-state="paused"] .buddy-inner{animation-duration:4.6s;}
+  .buddy[data-state="focus"] .buddy-inner{animation:buddy-sway 1.8s ease-in-out infinite;}
+  @keyframes buddy-sway{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+  .buddy[data-state="sleepy"] .buddy-inner{animation:buddy-drift 4.6s ease-in-out infinite;}
+  @keyframes buddy-drift{0%,100%{transform:translateY(0) rotate(3deg)}50%{transform:translateY(2px) rotate(-2deg)}}
+  .buddy[data-state="celebrate"] .buddy-inner{animation:buddy-bounce .55s cubic-bezier(.28,.84,.42,1) 4;}
+  @keyframes buddy-bounce{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-14px) scale(1.06) rotate(-4deg)}65%{transform:translateY(1px) scale(.97)}}
+
+  .buddy .face-part{display:none}
+  .buddy[data-state="idle"] .f-open, .buddy[data-state="paused"] .f-open,
+  .buddy[data-state="idle"] .f-m-smile, .buddy[data-state="paused"] .f-m-smile,
+  .buddy[data-state="focus"] .f-happy, .buddy[data-state="celebrate"] .f-happy,
+  .buddy[data-state="focus"] .f-m-open, .buddy[data-state="celebrate"] .f-m-open,
+  .buddy[data-state="sleepy"] .f-sleepy, .buddy[data-state="sleepy"] .f-m-yawn{display:block}
+  .buddy .eyes-blink{animation:buddy-blink 4.6s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
+  @keyframes buddy-blink{0%,91%,100%{transform:scaleY(1)}94.5%{transform:scaleY(.1)}97%{transform:scaleY(1)}}
+
+  .buddy-bubble{
+    position:absolute; top:8px; right:calc(100% + 5px); transform:rotate(-2deg);
+    background:var(--card); border:1.5px solid var(--card-border); color:var(--text);
+    border-radius:999px; padding:5px 10px; font-family:"Nunito",sans-serif; font-weight:800; font-size:11px;
+    white-space:nowrap; box-shadow:0 6px 14px rgba(0,0,0,.08);
+  }
+  .buddy-zzz{position:absolute; top:-10px; right:-6px; width:32px; height:42px; display:none;}
+  .buddy[data-state="sleepy"] .buddy-zzz{display:block}
+  .buddy-zzz span{
+    position:absolute; font-family:"Nunito",sans-serif; font-weight:900; color:var(--muted); opacity:0;
+    animation:zzz-float 2.7s ease-in-out infinite; line-height:1;
+  }
+  .buddy-zzz span:nth-child(1){left:0; bottom:0; font-size:11px;}
+  .buddy-zzz span:nth-child(2){left:10px; bottom:9px; font-size:14px; animation-delay:.9s;}
+  .buddy-zzz span:nth-child(3){left:20px; bottom:18px; font-size:17px; animation-delay:1.8s;}
+  @keyframes zzz-float{0%{opacity:0; transform:translateY(5px) rotate(-6deg)}30%{opacity:.95}100%{opacity:0; transform:translateY(-12px) rotate(8deg)}}
+
+  .buddy-sparks{position:absolute; inset:0; display:none;}
+  .buddy[data-state="celebrate"] .buddy-sparks{display:block}
+  .buddy-sparks i{
+    position:absolute; width:11px; height:11px; background:#FFC24B;
+    clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);
+    animation:spark-pop .6s ease-in-out infinite;
+  }
+  .buddy-sparks i:nth-child(1){left:-8px; top:10px;}
+  .buddy-sparks i:nth-child(2){right:-9px; top:26px; width:9px; height:9px; animation-delay:.18s; background:#FF9A3D;}
+  .buddy-sparks i:nth-child(3){left:38%; top:-11px; width:13px; height:13px; animation-delay:.36s;}
+  @keyframes spark-pop{0%{transform:scale(.4) rotate(0deg); opacity:.4}50%{transform:scale(1.15) rotate(20deg); opacity:1}100%{transform:scale(.6) rotate(0deg); opacity:.5}}
+
+  @media (prefers-reduced-motion: reduce){
+    .buddy-inner, .buddy .eyes-blink, .buddy-zzz span, .buddy-sparks i{animation:none !important}
+  }
+
+  .mode-label{font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--muted); margin-top:4px;}
+  .time{
+    font-family:"Nunito",sans-serif; font-weight:900; letter-spacing:-.04em;
+    font-size:56px; line-height:.95; margin:2px 0 2px; font-variant-numeric:tabular-nums;
+  }
+  @media(min-width:480px){ .time{font-size:64px} }
+  .status{font-size:13.5px; font-weight:700; color:var(--muted); min-height:18px;}
+  .status strong{color:var(--text)}
+
+  /* controls */
+  .controls{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap;}
+  .btn{
+    border:0; cursor:pointer; font-family:"Nunito",sans-serif; font-weight:900;
+    border-radius:999px; transition:.15s; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-primary{
+    background:var(--tomato); color:white; padding:14px 28px; font-size:16px; min-width:148px;
+    box-shadow:var(--btn-shadow);
+  }
+  .btn-primary.break{background:var(--leaf)}
+  .btn-ghost{
+    background:var(--card); color:var(--text); border:1.5px solid var(--card-border);
+    padding:13px 18px; font-size:14px;
+  }
+  .btn-small{padding:9px 14px; font-size:13px;}
+
+  /* progress dots + stats */
+  .meta{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; padding:14px 2px 2px; border-top:1px dashed var(--card-border); flex-wrap:wrap;}
+  .dots{display:flex; gap:6px; align-items:center;}
+  .dot{width:10px;height:10px;border-radius:50%; background:var(--ring-bg); border:1.5px solid var(--card-border); transition:.2s}
+  .dot.filled{background:var(--tomato); border-color:var(--tomato)}
+  .dot.filled.break{background:var(--leaf); border-color:var(--leaf)}
+  .meta-text{font-size:12.5px; font-weight:700; color:var(--muted)}
+  .meta-text b{color:var(--text)}
+
+  /* task + settings */
+  .section{margin-top:16px; background:var(--card); border:1.5px solid var(--card-border); border-radius:20px; padding:16px;}
+  .section h2{margin:0; font-family:"Nunito",sans-serif; font-size:14px; font-weight:900; letter-spacing:-.01em; display:flex; align-items:center; gap:8px;}
+  .section h2 span{font-size:16px}
+  .task-input{
+    width:100%; margin-top:10px; border:1.5px solid var(--card-border); background:var(--bg);
+    border-radius:12px; padding:12px 14px; font-family:"Quicksand",sans-serif; font-weight:600; font-size:14.5px; color:var(--text); outline:none;
+  }
+  .task-input:focus{border-color:var(--tomato); background:var(--card); box-shadow:0 0 0 4px rgba(255,90,74,.12)}
+  .task-input::placeholder{color:var(--muted); font-weight:600}
+
+  /* quick tasks + priority tags */
+  .p-urgent{--tag:#E84533; --tag-bg:#FFE9E5;}
+  .p-high{--tag:#DE7418; --tag-bg:#FFEFDB;}
+  .p-medium{--tag:#A8780A; --tag-bg:#FFF3CF;}
+  .p-low{--tag:#239E68; --tag-bg:#DFF5E9;}
+  .p-delegate{--tag:#3E7CB1; --tag-bg:#E0EDFA;}
+  @media (prefers-color-scheme: dark){
+    .p-urgent{--tag:#FF9A8A; --tag-bg:#452723;}
+    .p-high{--tag:#FFB27A; --tag-bg:#453119;}
+    .p-medium{--tag:#F2CD6B; --tag-bg:#453A19;}
+    .p-low{--tag:#7AD9AC; --tag-bg:#1E3D2E;}
+    .p-delegate{--tag:#93C4F0; --tag-bg:#22384E;}
+  }
+  .prio-row{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .prio-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:800; color:var(--muted);}
+  .prio-chips{display:flex; gap:6px; flex-wrap:wrap; flex:1;}
+  .prio-chip{
+    border:1.5px solid var(--card-border); background:var(--card); color:var(--muted);
+    border-radius:999px; padding:6px 11px 6px 9px; font-family:"Nunito",sans-serif; font-weight:800; font-size:12px;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:.15s;
+  }
+  .prio-chip::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--tag, var(--muted)); flex:0 0 8px;}
+  .prio-chip.selected{border-color:var(--tag); background:var(--tag-bg); color:var(--text);}
+  .prio-chip:active{transform:scale(.95)}
+  .prio-row .btn{min-width:0;}
+  .task-list{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .task-item{
+    display:flex; align-items:center; gap:10px; background:var(--bg); border:1.5px solid var(--card-border);
+    border-radius:14px; padding:9px 10px;
+  }
+  .task-item.current{border-color:var(--tomato); background:var(--tomato-soft); box-shadow:0 0 0 3px rgba(255,90,74,.10);}
+  .task-check{
+    width:24px; height:24px; flex:0 0 24px; border-radius:50%; border:2px solid var(--muted);
+    background:var(--card); cursor:pointer; display:grid; place-items:center; padding:0;
+    font-size:13px; font-weight:900; color:#fff; line-height:1;
+  }
+  .task-check:active{transform:scale(.92)}
+  .task-item.done .task-check{background:var(--leaf); border-color:var(--leaf);}
+  .task-text{flex:1; min-width:0; font-weight:700; font-size:14px; cursor:pointer; word-break:break-word; line-height:1.35;}
+  .task-item.done .task-text{text-decoration:line-through; color:var(--muted);}
+  .task-tag{
+    flex:0 0 auto; border:0; cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+    background:var(--tag-bg); color:var(--tag); font-family:"Nunito",sans-serif; font-weight:800; font-size:11px;
+    padding:4px 9px; border-radius:999px;
+  }
+  .task-tag::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--tag); flex:0 0 7px;}
+  .task-tag:active{transform:scale(.95)}
+  .task-del{
+    flex:0 0 auto; width:26px; height:26px; border:0; border-radius:50%; background:transparent; color:var(--muted);
+    font-size:17px; cursor:pointer; display:grid; place-items:center; line-height:1; padding:0;
+  }
+  .task-del:hover{background:var(--tomato-soft); color:var(--tomato-dark);}
+  .task-empty{margin:12px 2px 0; font-size:13px; color:var(--muted); font-weight:600;}
+  .task-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px;}
+  .task-stats{font-size:12.5px; font-weight:700; color:var(--muted);}
+  .clear-done{border:0; background:transparent; color:var(--tomato-dark); font-weight:800; font-size:12.5px; cursor:pointer; font-family:"Nunito",sans-serif; padding:4px 6px;}
+  [hidden]{display:none !important;}
+
+  .dur-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:12px;}
+  @media(max-width:420px){ .dur-grid{grid-template-columns:1fr;} }
+  .dur{
+    border:1.5px solid var(--card-border); border-radius:16px; padding:12px; background:var(--bg);
+  }
+  .dur label{display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:800; color:var(--muted); margin-bottom:8px;}
+  .dur-row{display:flex; align-items:center; gap:8px;}
+  .dur-row button{
+    width:32px;height:32px;border-radius:50%; border:1.5px solid var(--card-border); background:var(--card);
+    font-weight:900; cursor:pointer; display:grid; place-items:center; font-size:16px; color:var(--text);
+  }
+  .dur-row button:active{transform:scale(.94)}
+  .dur-val{flex:1; text-align:center; font-family:"Nunito",sans-serif; font-weight:900; font-size:18px}
+  .dur-val small{font-size:11px; color:var(--muted); font-weight:700}
+
+  .toggles{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+  .toggle{
+    display:inline-flex; align-items:center; gap:8px; border:1.5px solid var(--card-border);
+    background:var(--card); border-radius:999px; padding:8px 12px; font-size:12.5px; font-weight:700; cursor:pointer; user-select:none;
+  }
+  .toggle input{accent-color:var(--tomato); width:16px;height:16px; margin:0}
+
+  .hint{margin-top:14px; text-align:center; font-size:12px; color:var(--muted); font-weight:600; line-height:1.5; padding:0 6px;}
+  .hint kbd{background:var(--card); border:1px solid var(--card-border); border-bottom-width:2px; padding:1px 6px; border-radius:6px; font-family:inherit; font-size:11px; color:var(--text)}
+
+  .toast{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(20px);
+    background:#221814; color:#FFF6EC; padding:12px 16px; border-radius:999px; font-weight:700; font-size:13.5px;
+    opacity:0; pointer-events:none; transition:.25s; box-shadow:0 12px 30px rgba(0,0,0,.25); z-index:20;
+    max-width:calc(100vw - 24px); text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  @media (prefers-color-scheme: dark){ .toast{background:#FFF6EC; color:#221814} }
+
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge" aria-hidden="true">🍅</div>
+      <div>
+        <h1>Pomodoro</h1>
+        <p>cute focus timer • for every day</p>
+      </div>
+    </div>
+    <button class="sound-btn" id="soundToggle" aria-pressed="true">🔔 <span>Sound on</span></button>
+  </div>
+
+  <div class="card" id="card">
+    <div class="tabs" role="tablist" aria-label="Timer mode">
+      <button class="tab active" data-mode="focus" role="tab" aria-selected="true">🍅 Focus</button>
+      <button class="tab" data-mode="short" role="tab" aria-selected="false">☕ Short break</button>
+      <button class="tab" data-mode="long" role="tab" aria-selected="false">🌿 Long break</button>
+    </div>
+
+    <div class="timer-area">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring-bg" cx="100" cy="100" r="88"></circle>
+          <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="88"></circle>
+        </svg>
+        <div class="center">
+          <!-- cute tomato SVG -->
+          <svg class="tomato" id="tomato" viewBox="0 0 120 100" aria-hidden="true">
+            <!-- leaf -->
+            <path d="M60 18 C52 6, 40 8, 36 16 C48 18, 54 22, 60 26 C66 22, 72 18, 84 16 C80 8, 68 6, 60 18Z" fill="#2FB47A"/>
+            <path d="M60 22 L60 10" stroke="#239E68" stroke-width="4" stroke-linecap="round"/>
+            <!-- body -->
+            <ellipse cx="60" cy="58" rx="46" ry="34" fill="#FF5A4A"/>
+            <ellipse cx="44" cy="48" rx="12" ry="8" fill="#FF8A7A" opacity=".85"/>
+            <!-- face -->
+            <circle cx="48" cy="58" r="4.5" fill="#2B211D"/>
+            <circle cx="72" cy="58" r="4.5" fill="#2B211D"/>
+            <circle cx="49.5" cy="56.5" r="1.4" fill="white"/>
+            <circle cx="73.5" cy="56.5" r="1.4" fill="white"/>
+            <path id="mouth" d="M53 68 Q60 73 67 68" stroke="#2B211D" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+            <circle cx="38" cy="66" r="5" fill="#FF9A8A" opacity=".9"/>
+            <circle cx="82" cy="66" r="5" fill="#FF9A8A" opacity=".9"/>
+          </svg>
+
+          <div class="mode-label" id="modeLabel">Focus time</div>
+          <div class="time" id="timeDisplay" aria-live="polite">25:00</div>
+          <div class="status" id="statusText">Ready when you are ✨</div>
+        </div>
+
+        <!-- spark buddy: original star character, mood follows the timer -->
+        <div class="buddy" id="buddy" data-state="idle" aria-hidden="true">
+          <div class="buddy-bubble" id="buddyBubble">Ready when you are ✨</div>
+          <div class="buddy-inner">
+            <svg class="buddy-svg" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#FFD166"/>
+                  <stop offset="1" stop-color="#FF9A3D"/>
+                </linearGradient>
+              </defs>
+              <path d="M50 4 C55 32 68 45 96 50 C68 55 55 68 50 96 C45 68 32 55 4 50 C32 45 45 32 50 4 Z" fill="url(#sparkGrad)" stroke="#F28C28" stroke-width="3" stroke-linejoin="round"/>
+              <ellipse cx="38" cy="33" rx="5.5" ry="10" fill="#FFE3A3" opacity=".8" transform="rotate(-24 38 33)"/>
+              <circle cx="34.5" cy="60" r="4.6" fill="#FF8A7A" opacity=".85"/>
+              <circle cx="65.5" cy="60" r="4.6" fill="#FF8A7A" opacity=".85"/>
+              <!-- eyes: open (idle / paused), blinking -->
+              <g class="face-part f-open eyes-blink">
+                <circle cx="41" cy="50" r="3.6" fill="#2B211D"/>
+                <circle cx="59" cy="50" r="3.6" fill="#2B211D"/>
+                <circle cx="42.2" cy="48.6" r="1.2" fill="#fff"/>
+                <circle cx="60.2" cy="48.6" r="1.2" fill="#fff"/>
+              </g>
+              <!-- eyes: happy arcs (focusing / celebrating) -->
+              <g class="face-part f-happy" fill="none" stroke="#2B211D" stroke-width="2.8" stroke-linecap="round">
+                <path d="M36 51 Q41 45 46 51"/>
+                <path d="M54 51 Q59 45 64 51"/>
+              </g>
+              <!-- eyes: droopy (breaks) -->
+              <g class="face-part f-sleepy" fill="none" stroke="#2B211D" stroke-width="2.8" stroke-linecap="round">
+                <path d="M36 50 Q41 53.5 46 50"/>
+                <path d="M54 50 Q59 53.5 64 50"/>
+              </g>
+              <!-- mouths -->
+              <path class="face-part f-m-smile" d="M45 60 Q50 64 55 60" fill="none" stroke="#2B211D" stroke-width="2.6" stroke-linecap="round"/>
+              <path class="face-part f-m-open" d="M44 59 Q50 68.5 56 59 Q50 62 44 59 Z" fill="#2B211D"/>
+              <circle class="face-part f-m-yawn" cx="50" cy="62" r="2.8" fill="#2B211D"/>
+            </svg>
+          </div>
+          <div class="buddy-zzz"><span>z</span><span>z</span><span>Z</span></div>
+          <div class="buddy-sparks"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="startBtn">▶ Start focus</button>
+        <button class="btn btn-ghost" id="resetBtn">↺ Reset</button>
+      </div>
+
+      <div class="meta">
+        <div>
+          <div class="dots" id="dots" aria-label="Completed pomodoros">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+          <div class="meta-text" style="margin-top:6px"><b id="sessionCount">0</b> pomodoros today • <span id="cycleText">Cycle 1 / 4</span></div>
+        </div>
+        <button class="btn btn-ghost btn-small" id="clearBtn">Clear count</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span>📝</span> Quick tasks</h2>
+    <input class="task-input" id="taskInput" type="text" placeholder="Add a task and press Enter — e.g. Reply to emails…" autocomplete="off" maxlength="140" />
+    <div class="prio-row">
+      <span class="prio-label" id="prioLabel">Priority</span>
+      <div class="prio-chips" id="prioChips" role="radiogroup" aria-labelledby="prioLabel">
+        <button type="button" class="prio-chip p-urgent" data-prio="urgent" role="radio" aria-checked="false">Urgent</button>
+        <button type="button" class="prio-chip p-high" data-prio="high" role="radio" aria-checked="false">High</button>
+        <button type="button" class="prio-chip p-medium selected" data-prio="medium" role="radio" aria-checked="true">Medium</button>
+        <button type="button" class="prio-chip p-low" data-prio="low" role="radio" aria-checked="false">Low</button>
+        <button type="button" class="prio-chip p-delegate" data-prio="delegate" role="radio" aria-checked="false">Delegate</button>
+      </div>
+      <button type="button" class="btn btn-primary btn-small" id="addTaskBtn">+ Add</button>
+    </div>
+    <ul class="task-list" id="taskList"></ul>
+    <p class="task-empty" id="taskEmpty">No tasks yet — add your first one above ✨</p>
+    <div class="task-foot" id="taskFoot" hidden>
+      <span class="task-stats" id="taskStats"></span>
+      <button type="button" class="clear-done" id="clearDoneBtn">Clear done</button>
+    </div>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="autoBreak" checked> Auto-start breaks</label>
+      <label class="toggle"><input type="checkbox" id="autoFocus"> Auto-start focus</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span>⏱️</span> Durations <span style="color:var(--muted); font-weight:700; font-size:12px; margin-left:2px;">— tap + / − to adjust</span></h2>
+    <div class="dur-grid">
+      <div class="dur">
+        <label>Focus</label>
+        <div class="dur-row">
+          <button data-adj="focus:-1" aria-label="Decrease focus">−</button>
+          <div class="dur-val"><span id="focusVal">25</span> <small>min</small></div>
+          <button data-adj="focus:1" aria-label="Increase focus">+</button>
+        </div>
+      </div>
+      <div class="dur">
+        <label>Short break</label>
+        <div class="dur-row">
+          <button data-adj="short:-1" aria-label="Decrease short break">−</button>
+          <div class="dur-val"><span id="shortVal">5</span> <small>min</small></div>
+          <button data-adj="short:1" aria-label="Increase short break">+</button>
+        </div>
+      </div>
+      <div class="dur">
+        <label>Long break</label>
+        <div class="dur-row">
+          <button data-adj="long:-1" aria-label="Decrease long break">−</button>
+          <div class="dur-val"><span id="longVal">15</span> <small>min</small></div>
+          <button data-adj="long:1" aria-label="Increase long break">+</button>
+        </div>
+      </div>
+    </div>
+    <p style="margin:10px 2px 0; font-size:12.5px; color:var(--muted); font-weight:600; line-height:1.5">Classic Pomodoro is 25 • 5 • 15. After 4 focus sessions you get a long break. Your changes apply instantly when the timer is paused.</p>
+  </div>
+
+  <p class="hint">Press <kbd>Space</kbd> to start / pause &nbsp;•&nbsp; <kbd>R</kbd> to reset &nbsp;•&nbsp; Works offline, no account needed.<br>Made to be hosted anywhere — just this one file.</p>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var durations = { focus: 25*60, short: 5*60, long: 15*60 };
+  var labels = { focus: "Focus time", short: "Short break", long: "Long break" };
+  var mode = "focus";
+  var timeLeft = durations[mode];
+  var totalTime = durations[mode];
+  var running = false;
+  var endAt = null;
+  var tickId = null;
+  var completed = 0;
+  var soundOn = true;
+
+  var timeDisplay = document.getElementById('timeDisplay');
+  var modeLabel = document.getElementById('modeLabel');
+  var statusText = document.getElementById('statusText');
+  var startBtn = document.getElementById('startBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var ringFg = document.getElementById('ringFg');
+  var tomato = document.getElementById('tomato');
+  var mouth = document.getElementById('mouth');
+  var buddy = document.getElementById('buddy');
+  var buddyBubble = document.getElementById('buddyBubble');
+  var celebrating = false;
+  var dotsEl = document.getElementById('dots');
+  var sessionCount = document.getElementById('sessionCount');
+  var cycleText = document.getElementById('cycleText');
+  var taskInput = document.getElementById('taskInput');
+  var toast = document.getElementById('toast');
+  var soundToggle = document.getElementById('soundToggle');
+  var autoBreak = document.getElementById('autoBreak');
+  var autoFocus = document.getElementById('autoFocus');
+
+  var CIRC = 2 * Math.PI * 88;
+  ringFg.style.strokeDasharray = CIRC;
+  ringFg.style.strokeDashoffset = 0;
+
+  var audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playChime(kind){
+    if(!soundOn) return;
+    var ctx = ensureAudio();
+    if(!ctx) return;
+    // soft Muse-like sparkle: gentle sine chimes, not harsh beeps
+    var now = ctx.currentTime;
+    var notes = kind === 'break' ? [523.25, 659.25, 783.99] : [783.99, 659.25, 523.25, 1046.5];
+    // focus complete -> happy up-chime, break complete -> gentle down
+    if(kind === 'focus') notes = [523.25, 659.25, 783.99, 1046.5];
+    if(kind === 'break') notes = [659.25, 523.25, 392.0];
+    notes.forEach(function(freq, i){
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now + i*0.14);
+      g.gain.exponentialRampToValueAtTime(0.22, now + i*0.14 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + i*0.14 + 0.55);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now + i*0.14);
+      o.stop(now + i*0.14 + 0.6);
+    });
+    // tiny second harmonic sparkle
+    setTimeout(function(){
+      if(!ctx) return;
+      var o2 = ctx.createOscillator(); var g2 = ctx.createGain();
+      o2.type='triangle'; o2.frequency.value = 1567.98;
+      var t = ctx.currentTime;
+      g2.gain.setValueAtTime(0.0001, t);
+      g2.gain.exponentialRampToValueAtTime(0.06, t+0.02);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t+0.4);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(t); o2.stop(t+0.45);
+    }, 380);
+    if(navigator.vibrate) navigator.vibrate([60,40,60]);
+  }
+
+  function fmt(s){
+    s = Math.max(0, Math.ceil(s));
+    var m = Math.floor(s/60);
+    var sec = s%60;
+    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  }
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ toast.classList.remove('show'); }, 3400);
+  }
+  function updateDots(){
+    var dots = dotsEl.querySelectorAll('.dot');
+    var inCycle = completed % 4;
+    // if just completed a full cycle, show all filled briefly until next cycle resets visually via inCycle logic
+    var filled = (completed>0 && inCycle===0) ? 4 : inCycle;
+    // after completing exactly, keep filled until next focus starts counting? keep simple: filled = inCycle, but if completed>0 and inCycle==0 show 4
+    if(completed===0) filled=0;
+    dots.forEach(function(d,i){
+      d.classList.toggle('filled', i < filled);
+      d.classList.toggle('break', mode!=='focus');
+    });
+    sessionCount.textContent = completed;
+    var cycleNum = Math.floor(completed/4)+1;
+    var posInCycle = (completed % 4) + 1;
+    if(completed>0 && completed%4===0) { cycleNum = completed/4; posInCycle = 4; }
+    cycleText.textContent = 'Cycle ' + cycleNum + ' • ' + Math.min(4, (completed%4)+ (completed%4===0&&completed>0?0:1)) + ' / 4';
+    // simpler accurate text:
+    if(completed===0) cycleText.textContent = 'Cycle 1 / 4';
+    else cycleText.textContent = completed + (completed===1 ? ' done' : ' done') + ' • next long break after ' + (4 - (completed%4 || 4) + (completed%4===0?0:0)) ;
+    // keep it clean: override with straightforward
+    if(completed===0) cycleText.textContent = 'Cycle 1 of 4';
+    else {
+      var leftToLong = 4 - (completed % 4);
+      if(completed % 4 === 0) leftToLong = 0;
+      cycleText.textContent = leftToLong===0 ? 'Long break earned 🎉' : leftToLong + ' more to long break';
+    }
+  }
+
+  function render(){
+    timeDisplay.textContent = fmt(timeLeft);
+    document.title = fmt(timeLeft) + ' • ' + labels[mode] + ' — Pomodoro Timer';
+    modeLabel.textContent = labels[mode];
+    var progress = totalTime ? (timeLeft/totalTime) : 0;
+    ringFg.style.strokeDashoffset = CIRC * (1 - progress);
+    ringFg.classList.toggle('break', mode!=='focus');
+    // tabs
+    document.querySelectorAll('.tab').forEach(function(t){
+      var active = t.dataset.mode===mode;
+      t.classList.toggle('active', active);
+      t.classList.toggle('break', active && mode!=='focus');
+      t.setAttribute('aria-selected', active ? 'true':'false');
+    });
+    // start button
+    if(running){
+      startBtn.textContent = '⏸ Pause';
+    } else {
+      if(timeLeft < totalTime && timeLeft>0) startBtn.textContent = '▶ Resume';
+      else startBtn.textContent = mode==='focus' ? '▶ Start focus' : '▶ Start break';
+    }
+    startBtn.classList.toggle('break', mode!=='focus');
+    // mouth / face
+    if(!running && timeLeft===totalTime){
+      mouth.setAttribute('d','M53 68 Q60 73 67 68');
+      statusText.innerHTML = mode==='focus' ? 'Ready when you are ✨' : 'Take a breather 🌿';
+    } else if(running){
+      mouth.setAttribute('d','M54 67 Q60 71 66 67');
+      var task = getFocusText();
+      if(mode==='focus') statusText.innerHTML = task ? 'Focusing on <strong>'+ escapeHtml(task) +'</strong>' : 'Stay focused, you’ve got this 🍅';
+      else statusText.textContent = mode==='short' ? 'Stretch, sip water, relax ☕' : 'Long break — recharge fully 🌿';
+    } else {
+      mouth.setAttribute('d','M54 68 Q60 70 66 68');
+      statusText.textContent = 'Paused — tap Resume to continue';
+    }
+    tomato.classList.toggle('running', running);
+    // spark buddy mood follows the timer state
+    if(celebrating){
+      buddy.setAttribute('data-state','celebrate');
+      buddyBubble.textContent = 'You did it! 🎉';
+    } else if(running && mode==='focus'){
+      buddy.setAttribute('data-state','focus');
+      buddyBubble.textContent = "You've got this! ✨";
+    } else if(mode!=='focus'){
+      buddy.setAttribute('data-state','sleepy');
+      buddyBubble.textContent = running ? 'Recharging… 💤' : 'Rest up 🌿';
+    } else if(timeLeft<totalTime && timeLeft>0){
+      buddy.setAttribute('data-state','paused');
+      buddyBubble.textContent = "Paused — I'm here 🙂";
+    } else {
+      buddy.setAttribute('data-state','idle');
+      buddyBubble.textContent = 'Ready when you are ✨';
+    }
+  }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function setMode(newMode, opts){
+    opts = opts || {};
+    mode = newMode;
+    totalTime = durations[mode];
+    timeLeft = totalTime;
+    running = false;
+    endAt = null;
+    if(tickId) clearInterval(tickId);
+    tomato.classList.remove('done');
+    render();
+    updateDots();
+    if(opts.announce) showToast(labels[mode] + ' — ' + Math.round(totalTime/60) + ' min');
+  }
+
+  function tick(){
+    if(!endAt) return;
+    var remain = Math.max(0, (endAt - Date.now())/1000);
+    timeLeft = remain;
+    render();
+    if(remain <= 0.05){
+      finish();
+    }
+  }
+  function start(){
+    ensureAudio();
+    if(running) return;
+    running = true;
+    endAt = Date.now() + timeLeft*1000;
+    if(tickId) clearInterval(tickId);
+    tickId = setInterval(tick, 200);
+    tomato.classList.remove('done');
+    render();
+  }
+  function pause(){
+    if(!running) return;
+    running = false;
+    if(endAt) timeLeft = Math.max(0, (endAt - Date.now())/1000);
+    endAt = null;
+    if(tickId) clearInterval(tickId);
+    render();
+  }
+  function toggle(){
+    if(running) pause(); else start();
+  }
+  function finish(){
+    if(tickId) clearInterval(tickId);
+    running = false;
+    endAt = null;
+    timeLeft = 0;
+    render();
+    tomato.classList.add('done');
+    celebrating = true;
+    render();
+    setTimeout(function(){ celebrating = false; render(); }, 2400);
+    if(mode==='focus'){
+      completed++;
+      updateDots();
+      playChime('focus');
+      var next = (completed % 4 === 0) ? 'long' : 'short';
+      showToast('🍅 Focus done! Time for a ' + (next==='long' ? 'long break 🌿' : 'short break ☕'));
+      // switch
+      setTimeout(function(){
+        setMode(next);
+        if(autoBreak.checked) start();
+      }, 900);
+    } else {
+      playChime('break');
+      showToast('✨ Break over — ready to focus again?');
+      setTimeout(function(){
+        setMode('focus');
+        if(autoFocus.checked) start();
+      }, 900);
+    }
+    // reset face after wiggle
+    setTimeout(function(){ tomato.classList.remove('done'); }, 2000);
+  }
+
+  // events
+  startBtn.addEventListener('click', toggle);
+  resetBtn.addEventListener('click', function(){
+    pause();
+    timeLeft = durations[mode];
+    totalTime = durations[mode];
+    tomato.classList.remove('done');
+    render();
+    showToast('Timer reset');
+  });
+  document.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click', function(){ setMode(tab.dataset.mode, {announce:true}); });
+  });
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    completed = 0; updateDots(); showToast('Session count cleared');
+  });
+  soundToggle.addEventListener('click', function(){
+    soundOn = !soundOn;
+    soundToggle.setAttribute('aria-pressed', soundOn ? 'true':'false');
+    soundToggle.innerHTML = soundOn ? '🔔 <span>Sound on</span>' : '🔕 <span>Sound off</span>';
+    if(soundOn){ ensureAudio(); playChime('break'); }
+  });
+  taskInput.addEventListener('input', function(){ if(running) render(); });
+
+  // ---- quick tasks with priority tags (saved in this browser) ----
+  var PRIORITIES = [
+    { id:'urgent', label:'Urgent' },
+    { id:'high', label:'High' },
+    { id:'medium', label:'Medium' },
+    { id:'low', label:'Low' },
+    { id:'delegate', label:'Delegate' }
+  ];
+  var TASKS_KEY = 'pomodoro-quick-tasks-v1';
+  var tasks = [];
+  var currentTaskId = null;
+  var selectedPrio = 'medium';
+  var taskList = document.getElementById('taskList');
+  var taskEmpty = document.getElementById('taskEmpty');
+  var taskFoot = document.getElementById('taskFoot');
+  var taskStats = document.getElementById('taskStats');
+  var clearDoneBtn = document.getElementById('clearDoneBtn');
+  var prioChips = document.getElementById('prioChips');
+
+  function prioExists(id){ return PRIORITIES.some(function(p){ return p.id===id; }); }
+  function prioLabel(id){ for(var i=0;i<PRIORITIES.length;i++) if(PRIORITIES[i].id===id) return PRIORITIES[i].label; return 'Medium'; }
+  function saveTasks(){
+    try { localStorage.setItem(TASKS_KEY, JSON.stringify({ tasks: tasks, currentTaskId: currentTaskId })); } catch(e){}
+  }
+  function loadTasks(){
+    try {
+      var raw = localStorage.getItem(TASKS_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      if(data && Array.isArray(data.tasks)){
+        tasks = data.tasks.filter(function(t){ return t && typeof t.text==='string' && t.text.trim(); }).map(function(t){
+          return { id: String(t.id || ''), text: t.text, prio: prioExists(t.prio) ? t.prio : 'medium', done: !!t.done };
+        });
+        currentTaskId = data.currentTaskId || null;
+      }
+    } catch(e){}
+  }
+  function getFocusText(){
+    var typed = taskInput.value.trim();
+    if(typed) return typed;
+    for(var i=0;i<tasks.length;i++){ if(tasks[i].id===currentTaskId && !tasks[i].done) return tasks[i].text; }
+    return '';
+  }
+  function renderTasks(){
+    taskList.innerHTML = tasks.map(function(t){
+      var cls = 'task-item' + (t.done ? ' done' : '') + (t.id===currentTaskId && !t.done ? ' current' : '');
+      return '<li class="' + cls + '" data-id="' + escapeHtml(t.id) + '">'
+        + '<button type="button" class="task-check" data-act="toggle" aria-pressed="' + (t.done ? 'true' : 'false') + '" aria-label="' + (t.done ? 'Mark not done: ' : 'Mark done: ') + escapeHtml(t.text) + '">' + (t.done ? '✓' : '') + '</button>'
+        + '<span class="task-text" data-act="focus" title="Tap to focus on this task">' + escapeHtml(t.text) + '</span>'
+        + '<button type="button" class="task-tag p-' + t.prio + '" data-act="prio" title="Tap to change priority">' + prioLabel(t.prio) + '</button>'
+        + '<button type="button" class="task-del" data-act="del" aria-label="Delete task: ' + escapeHtml(t.text) + '">×</button>'
+        + '</li>';
+    }).join('');
+    var doneCount = tasks.filter(function(t){ return t.done; }).length;
+    var openCount = tasks.length - doneCount;
+    taskEmpty.hidden = tasks.length > 0;
+    taskFoot.hidden = tasks.length === 0;
+    taskStats.textContent = tasks.length === 0 ? '' : openCount + ' to do • ' + doneCount + ' done';
+    clearDoneBtn.hidden = doneCount === 0;
+  }
+  function addTask(){
+    var text = taskInput.value.trim();
+    if(!text){ taskInput.focus(); return; }
+    var t = { id: 't' + Date.now().toString(36) + Math.floor(Math.random()*9999), text: text, prio: selectedPrio, done: false };
+    tasks.push(t);
+    currentTaskId = t.id;
+    taskInput.value = '';
+    saveTasks(); renderTasks(); render();
+    taskInput.focus();
+  }
+  function selectPrio(id){
+    selectedPrio = id;
+    prioChips.querySelectorAll('.prio-chip').forEach(function(chip){
+      var on = chip.getAttribute('data-prio')===id;
+      chip.classList.toggle('selected', on);
+      chip.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+  prioChips.addEventListener('click', function(e){
+    var chip = e.target.closest('.prio-chip');
+    if(!chip) return;
+    selectPrio(chip.getAttribute('data-prio'));
+    taskInput.focus();
+  });
+  document.getElementById('addTaskBtn').addEventListener('click', addTask);
+  taskInput.addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); addTask(); }
+  });
+  taskList.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-act]');
+    if(!btn) return;
+    var li = e.target.closest('.task-item');
+    if(!li) return;
+    var id = li.getAttribute('data-id');
+    var act = btn.getAttribute('data-act');
+    var t = null;
+    for(var i=0;i<tasks.length;i++) if(tasks[i].id===id) t = tasks[i];
+    if(!t) return;
+    if(act==='toggle'){ t.done = !t.done; }
+    else if(act==='del'){
+      tasks = tasks.filter(function(x){ return x.id!==id; });
+      if(currentTaskId===id) currentTaskId = null;
+    }
+    else if(act==='prio'){
+      var idx = 0;
+      PRIORITIES.forEach(function(p,i){ if(p.id===t.prio) idx=i; });
+      t.prio = PRIORITIES[(idx+1)%PRIORITIES.length].id;
+    }
+    else if(act==='focus'){ if(!t.done) currentTaskId = id; }
+    saveTasks(); renderTasks(); render();
+  });
+  clearDoneBtn.addEventListener('click', function(){
+    tasks = tasks.filter(function(t){ return !t.done; });
+    if(currentTaskId && !tasks.some(function(t){ return t.id===currentTaskId; })) currentTaskId = null;
+    saveTasks(); renderTasks(); render();
+  });
+  loadTasks();
+  renderTasks();
+
+  // duration adjusters
+  function refreshDurationLabels(){
+    document.getElementById('focusVal').textContent = Math.round(durations.focus/60);
+    document.getElementById('shortVal').textContent = Math.round(durations.short/60);
+    document.getElementById('longVal').textContent = Math.round(durations.long/60);
+  }
+  document.querySelectorAll('[data-adj]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var parts = btn.getAttribute('data-adj').split(':');
+      var key = parts[0]; var delta = parseInt(parts[1],10);
+      var mins = Math.round(durations[key]/60) + delta;
+      mins = Math.min(90, Math.max(1, mins));
+      durations[key] = mins*60;
+      refreshDurationLabels();
+      if(mode===key && !running){
+        totalTime = durations[key];
+        timeLeft = totalTime;
+        render();
+      }
+      showToast(key==='focus' ? 'Focus set to '+mins+' min' : key==='short' ? 'Short break set to '+mins+' min' : 'Long break set to '+mins+' min');
+    });
+  });
+
+  // keyboard
+  document.addEventListener('keydown', function(e){
+    if(e.target && (e.target.tagName==='INPUT' && e.target.type==='text')) return;
+    if(e.code==='Space'){ e.preventDefault(); toggle(); }
+    if(e.key==='r' || e.key==='R'){ pause(); timeLeft=durations[mode]; totalTime=durations[mode]; render(); }
+    if(e.key==='1') setMode('focus');
+    if(e.key==='2') setMode('short');
+    if(e.key==='3') setMode('long');
+  });
+
+  // init
+  refreshDurationLabels();
+  render();
+  updateDots();
+
+  // resume audio on first interaction (iOS requirement)
+  document.addEventListener('pointerdown', function(){ ensureAudio(); }, { once:true });
+})();
+</script>
+</body>
+</html>
